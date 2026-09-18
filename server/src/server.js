@@ -1,22 +1,26 @@
 import express from 'express';
 import cors from 'cors';
-const app=express(), port=process.env.PORT||5000;
-app.use(cors()); app.use(express.json());
-const recipes=[
-{id:1,name:'Strawberry Cloud Cheesecake',cuisine:'American',category:'Dessert',mealType:'dessert',dietaryTags:['vegetarian'],description:'Dreamy no-bake cheesecake with fresh strawberries.',ingredients:['biscuits','butter','cream cheese','sugar','strawberries','cream'],instructions:['Crush biscuits and mix with melted butter.','Press into a tin and chill.','Beat cream cheese with sugar and fold in cream.','Spread over crust and chill four hours.'],prepTime:25,cookTime:0,servings:8,imageUrl:'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=900&q=80'},
-{id:2,name:'Peach Berry Parfait',cuisine:'Greek',category:'Breakfast',mealType:'breakfast',dietaryTags:['vegetarian','high-protein'],description:'Pretty layers of yogurt, peaches, berries, and granola.',ingredients:['Greek yogurt','peaches','berries','granola','honey'],instructions:['Spoon yogurt into glasses.','Layer with fruit and granola.','Repeat and finish with honey.','Serve immediately.'],prepTime:10,cookTime:0,servings:2,imageUrl:'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80'},
-{id:3,name:'Cozy French Onion Soup',cuisine:'French',category:'Dinner',mealType:'dinner',dietaryTags:[],description:'Caramelized onions, savory broth, and bubbly cheese toast.',ingredients:['onions','butter','beef broth','thyme','baguette','Gruyere'],instructions:['Cook onions in butter until golden.','Add broth and thyme and simmer.','Ladle into oven-safe bowls.','Top with bread and cheese and broil.'],prepTime:15,cookTime:60,servings:4,imageUrl:'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=900&q=80'},
-{id:4,name:'Mini Pizza Bowl',cuisine:'Italian',category:'Lunch',mealType:'lunch',dietaryTags:[],description:'All the cozy flavors of pizza in a spoonable bowl.',ingredients:['tomato sauce','mozzarella','pepperoni','peppers','mushrooms','oregano'],instructions:['Warm sauce with vegetables and oregano.','Add sauce, toppings, and cheese to bowls.','Bake until cheese bubbles.','Serve warm.'],prepTime:15,cookTime:20,servings:2,imageUrl:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=900&q=80'},
-{id:5,name:'Spicy Coconut Chickpea Curry',cuisine:'Indian',category:'Dinner',mealType:'dinner',dietaryTags:['vegetarian','vegan'],description:'A rich curry packed with chickpeas and spinach.',ingredients:['chickpeas','coconut milk','onion','garlic','ginger','spinach'],instructions:['Saute onion, garlic, and ginger.','Add spices and coconut milk.','Simmer with chickpeas.','Fold in spinach and serve.'],prepTime:15,cookTime:25,servings:4,imageUrl:'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80'},
-{id:6,name:'Rainbow Veggie Tacos',cuisine:'Mexican',category:'Dinner',mealType:'dinner',dietaryTags:['vegan','gluten-free'],description:'Roasted vegetables with avocado crema in warm tortillas.',ingredients:['corn tortillas','sweet potato','black beans','peppers','avocado','lime'],instructions:['Roast sweet potato and peppers.','Blend avocado with lime.','Warm tortillas and add fillings.','Finish with crema and cilantro.'],prepTime:20,cookTime:25,servings:4,imageUrl:'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=900&q=80'}];
-const favorites=new Map(), user=req=>req.header('x-user-id')||'anonymous';
-const match=(r,q)=>{const text=[r.name,r.description,r.cuisine,...r.ingredients].join(' ').toLowerCase();return(!q.search||text.includes(q.search.toLowerCase()))&&(!q.cuisine||r.cuisine.toLowerCase()===q.cuisine.toLowerCase())&&(!q.category||r.category.toLowerCase()===q.category.toLowerCase())&&(!q.mealType||r.mealType===q.mealType)&&(!q.dietary||r.dietaryTags.includes(q.dietary));};
-app.get('/api/health',(_,res)=>res.json({status:'ok'}));
-app.get('/api/recipes',(req,res)=>{const items=recipes.filter(r=>match(r,req.query));res.json({items,total:items.length});});
-app.get('/api/recipes/:id',(req,res)=>{const r=recipes.find(x=>x.id===Number(req.params.id));r?res.json(r):res.status(404).json({message:'Recipe not found'});});
-app.get('/api/filters',(_,res)=>res.json({cuisines:[...new Set(recipes.map(r=>r.cuisine))].sort(),categories:[...new Set(recipes.map(r=>r.category))].sort(),mealTypes:[...new Set(recipes.map(r=>r.mealType))].sort(),dietaryTags:[...new Set(recipes.flatMap(r=>r.dietaryTags))].sort()}));
-app.get('/api/favorites',req=>{});
-app.get('/api/favorites',(req,res)=>{const ids=[...(favorites.get(user(req))||new Set())];res.json({ids,items:recipes.filter(r=>ids.includes(r.id))});});
-app.post('/api/favorites/:id/toggle',(req,res)=>{const r=recipes.find(x=>x.id===Number(req.params.id));if(!r)return res.status(404).json({message:'Recipe not found'});const set=favorites.get(user(req))||new Set(),isFavorite=!set.has(r.id);isFavorite?set.add(r.id):set.delete(r.id);favorites.set(user(req),set);res.json({recipe:r,isFavorite});});
-app.get('/api/recommendations',(req,res)=>{const terms=(req.query.ingredients||'').toLowerCase().split(/[ ,]+/).filter(Boolean);const result=recipes.map(r=>({r,score:terms.reduce((n,t)=>n+(r.ingredients.some(i=>i.toLowerCase().includes(t))?3:0),0)+(req.query.cuisine&&r.cuisine.toLowerCase()===req.query.cuisine.toLowerCase()?2:0)+(req.query.dietary&&r.dietaryTags.includes(req.query.dietary)?2:0)})).sort((a,b)=>b.score-a.score).slice(0,3).map(x=>x.r);res.json({recipes:result,message:result.length?'I found tasty matches for you!':'Try an ingredient or preference.'});});
-app.listen(port,()=>console.log(`Recipe API running on http://localhost:${port}`));
+const app = express();
+const port = process.env.PORT || 5000;
+app.use(cors());
+app.use(express.json());
+
+const books = [
+  { title: 'The Night Circus', author: 'Erin Morgenstern', moods: ['dreamy','mysterious','cinematic','magic'], mood: 'dreamy · cinematic · mysterious', reason: 'A lush, nocturnal world for songs that feel like a secret portal.', color: 'rose' },
+  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', moods: ['nostalgic','tender','electric','friendship'], mood: 'nostalgic · tender · electric', reason: 'For melodies that carry friendship, memory, and a little beautiful ache.', color: 'lilac' },
+  { title: 'The Seven Husbands of Evelyn Hugo', author: 'Taylor Jenkins Reid', moods: ['glamorous','bittersweet','dramatic','main character'], mood: 'glamorous · bittersweet · dramatic', reason: 'A sweeping story with the same glitter-and-heart energy as a perfect chorus.', color: 'sun' },
+  { title: 'A Psalm for the Wild-Built', author: 'Becky Chambers', moods: ['cozy','hopeful','soft','peaceful'], mood: 'cozy · hopeful · soft', reason: 'A warm, gentle reset for songs that feel like sunlight through a window.', color: 'rose' },
+  { title: 'The Song of Achilles', author: 'Madeline Miller', moods: ['heartbreak','romantic','epic','sad'], mood: 'romantic · epic · aching', reason: 'For the kind of beautiful heartbreak that deserves a whole mythology.', color: 'lilac' },
+  { title: 'Daisy Jones & The Six', author: 'Taylor Jenkins Reid', moods: ['rock','music','messy','electric'], mood: 'rock · messy · electric', reason: 'The obvious backstage pass for a song with guitars, secrets, and complicated people.', color: 'sun' },
+];
+const words = (value) => value.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+app.get('/api/health', (_, res) => res.json({ status: 'ok', ai: 'local-mood-engine' }));
+app.get('/api/book-recommendations', (req, res) => {
+  const song = String(req.query.song || '').trim();
+  if (!song) return res.status(400).json({ message: 'Please provide a song.' });
+  const tokens = words(song);
+  const ranked = books.map((book) => ({ ...book, score: book.moods.reduce((score, mood) => score + (tokens.some((token) => mood.includes(token) || token.includes(mood)) ? 4 : 0), 0) + (tokens.length % 3) })).sort((a, b) => b.score - a.score);
+  const selected = ranked.slice(0, 3).map(({ moods, score, ...book }) => book);
+  res.json({ song, books: selected, note: `A local AI-style mood match for “${song}” — no API key, account, or song data sent anywhere.` });
+});
+app.listen(port, () => console.log(`Sonnet API running on http://localhost:${port}`));

@@ -1,3 +1,59 @@
-import{useEffect,useState}from'react';import RecommendationChat from'./RecommendationChat';
-const fallback='https://images.unsplash.com/photo-1495521821757-a1efb90b62d6?auto=format&fit=crop&w=900&q=80',uid=localStorage.getItem('recipe-v2-user')||crypto.randomUUID();localStorage.setItem('recipe-v2-user',uid);const empty={name:'',description:'',ingredients:'',instructions:'',cuisine:'',category:'Dinner',mealType:'dinner',dietaryTags:'',imageUrl:'',prepTime:15,cookTime:20,servings:2};
-export default function App(){const[recipes,setRecipes]=useState([]),[filters,setFilters]=useState({}),[q,setQ]=useState({search:'',cuisine:'',category:'',mealType:'',dietary:''}),[favs,setFavs]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState(empty),[loading,setLoading]=useState(true);const headers={'x-user-id':uid};const load=async()=>{setLoading(true);const r=await fetch('/api/recipes?'+new URLSearchParams(q));setRecipes((await r.json()).items||[]);setLoading(false)};useEffect(()=>{load()},Object.values(q));useEffect(()=>{fetch('/api/filters').then(r=>r.json()).then(setFilters);fetch('/api/favorites',{headers}).then(r=>r.json()).then(d=>setFavs(d.ids||[]))},[]);const set=(key,value)=>setQ(x=>({...x,[key]:value}));const google=x=>window.open('https://www.google.com/search?q='+encodeURIComponent(x+' recipe'),'_blank','noopener,noreferrer');const toggle=async id=>{const r=await fetch('/api/favorites/'+id+'/toggle',{method:'POST',headers});if(r.ok){const d=await r.json();setFavs(x=>d.isFavorite?[...x,id]:x.filter(v=>v!==id))}};const submit=async e=>{e.preventDefault();const p={...form,ingredients:form.ingredients.split(',').map(x=>x.trim()).filter(Boolean),instructions:form.instructions.split('\n').map(x=>x.trim()).filter(Boolean),dietaryTags:form.dietaryTags.split(',').map(x=>x.trim()).filter(Boolean),imageUrl:form.imageUrl||fallback};await fetch('/api/recipes',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(p)});setForm(empty);load()};return <div className="app"><header><div><p className="eyebrow">🍓 LITTLE KITCHEN</p><h1>Recipe Finder ✦</h1><p className="subtitle">A cozy place to find your next favorite meal.</p></div><button className="pink" onClick={()=>setForm(empty)}>＋ New recipe</button></header><div className="layout"><main><section className="panel controls"><div className="search"><input value={q.search} onChange={e=>set('search',e.target.value)} placeholder="What are you craving? pasta, berries..."/><button className="purple" disabled={!q.search} onClick={()=>google(q.search)}>Search Google ✨</button></div><div className="filters"><select value={q.cuisine} onChange={e=>set('cuisine',e.target.value)}><option value="">🌍 Cuisine</option>{(filters.cuisines||[]).map(x=><option key={x}>{x}</option>)}</select><select value={q.category} onChange={e=>set('category',e.target.value)}><option value="">🍽 Category</option>{(filters.categories||[]).map(x=><option key={x}>{x}</option>)}</select><select value={q.mealType} onChange={e=>set('mealType',e.target.value)}><option value="">☀️ Meal</option>{(filters.mealTypes||[]).map(x=><option key={x}>{x}</option>)}</select><select value={q.dietary} onChange={e=>set('dietary',e.target.value)}><option value="">🌱 Dietary</option>{(filters.dietaryTags||[]).map(x=><option key={x}>{x}</option>)}</select><button className="clear" onClick={()=>setQ({search:'',cuisine:'',category:'',mealType:'',dietary:''})}>Clear</button></div></section><section className="panel recipes"><h2>Fresh from the kitchen</h2>{loading?<p>Loading tasty ideas...</p>:<div className="grid">{recipes.map(r=><article className="card" key={r.id} onClick={()=>setSelected(r)}><div className="photo"><img src={r.imageUrl||fallback} alt={r.name}/><button className="heart" onClick={e=>{e.stopPropagation();toggle(r.id)}}>{favs.includes(r.id)?'♥':'♡'}</button></div><div className="body"><span className="chip">{r.category}</span><span className="chip">{r.cuisine}</span><h3>{r.name}</h3><p>{r.description}</p><small>⏱ {(r.prepTime||0)+(r.cookTime||0)} min · 👥 {r.servings}</small><p className="view">See recipe →</p></div></article>)}</div>}</section></main><aside><RecommendationChat onSelect={setSelected}/><section className="panel form"><h2>🍰 Add a recipe</h2><form onSubmit={submit}><label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Description<textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><label>Ingredients<textarea required value={form.ingredients} onChange={e=>setForm({...form,ingredients:e.target.value})} placeholder="comma separated"/></label><label>Instructions<textarea required value={form.instructions} onChange={e=>setForm({...form,instructions:e.target.value})} placeholder="one step per line"/></label><div className="two"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['Breakfast','Lunch','Dinner','Dessert','Snack','Other'].map(x=><option key={x}>{x}</option>)}</select></label><label>Cuisine<input value={form.cuisine} onChange={e=>setForm({...form,cuisine:e.target.value})}/></label></div><button className="pink">Add recipe ✨</button></form></section></aside></div>{selected&&<div className="backdrop" onClick={()=>setSelected(null)}><article className="modal" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setSelected(null)}>×</button><img src={selected.imageUrl||fallback} alt={selected.name}/><div><span className="chip">{selected.cuisine}</span><h2>{selected.name}</h2><p>{selected.description}</p><h3>🛒 Ingredients</h3><ul>{selected.ingredients.map(x=><li key={x}>{x}</li>)}</ul><h3>👩‍🍳 Instructions</h3><ol>{selected.instructions.map(x=><li key={x}>{x}</li>)}</ol><button className="purple" onClick={()=>google(selected.name+' '+selected.cuisine)}>Find on Google 🔎</button></div></article></div>}</div>}
+import { useMemo, useState } from 'react';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const starterBooks = [
+  { title: 'The Night Circus', author: 'Erin Morgenstern', mood: 'dreamy, cinematic, mysterious', reason: 'A lush, nocturnal world for songs that feel like a secret portal.', color: 'rose' },
+  { title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', mood: 'nostalgic, tender, electric', reason: 'For melodies that carry friendship, memory, and a little beautiful ache.', color: 'lilac' },
+  { title: 'The Seven Husbands of Evelyn Hugo', author: 'Taylor Jenkins Reid', mood: 'glamorous, bittersweet, dramatic', reason: 'A sweeping story with the same glitter-and-heart energy as a perfect chorus.', color: 'sun' },
+];
+
+function songLink(song) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`;
+}
+
+export default function App() {
+  const [song, setSong] = useState('');
+  const [books, setBooks] = useState(starterBooks);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('book-favorites') || '[]'));
+
+  const savedCount = useMemo(() => favorites.length, [favorites]);
+
+  async function getRecommendations(event) {
+    event?.preventDefault();
+    const cleanSong = song.trim();
+    if (!cleanSong) return setMessage('Type a song first — we need a little music magic.');
+    setLoading(true); setMessage('Listening for the feeling in that song…');
+    try {
+      const response = await fetch(`${API}/api/book-recommendations?song=${encodeURIComponent(cleanSong)}`);
+      if (!response.ok) throw new Error('API unavailable');
+      const data = await response.json();
+      setBooks(data.books); setMessage(data.note);
+    } catch {
+      setBooks(starterBooks); setMessage('Local mood engine is ready — try the song again after starting the API for custom results.');
+    } finally { setLoading(false); }
+  }
+
+  function toggleFavorite(book) {
+    const next = favorites.some((item) => item.title === book.title) ? favorites.filter((item) => item.title !== book.title) : [...favorites, book];
+    setFavorites(next); localStorage.setItem('book-favorites', JSON.stringify(next));
+  }
+
+  return <main className="app-shell">
+    <nav className="topbar"><div className="brand"><span className="brand-mark">✦</span><span>sonnet</span></div><div className="saved-pill">♡ {savedCount} saved</div></nav>
+    <section className="hero">
+      <div className="eyebrow">A tiny recommendation studio <span>✺</span></div>
+      <h1>Find your next<br /><em>favorite chapter.</em></h1>
+      <p className="hero-copy">Give us a song. We’ll turn its mood into a little stack of books you’ll want to get lost in.</p>
+      <form className="song-form" onSubmit={getRecommendations}><span className="search-icon">⌕</span><input value={song} onChange={(event) => setSong(event.target.value)} placeholder="Try “Dreams” by Fleetwood Mac…" aria-label="Song title and artist" /><button type="submit" disabled={loading}>{loading ? 'Listening…' : 'Find my books  →'}</button></form>
+      {message && <p className="status" role="status">{message}</p>}
+      <div className="quick-row"><span>or start with a feeling</span>{['dreamy', 'heartbreak', 'main character energy', 'cozy'].map((feeling) => <button type="button" key={feeling} onClick={() => setSong(feeling)}>{feeling}</button>)}</div>
+    </section>
+    <section className="results-heading"><div><p className="eyebrow">Your mixtape, in books</p><h2>Three places to go next</h2></div><div className="now-playing">{playing ? '● now playing' : '◌ ready to play'}<span>{song || 'your song'}</span><button type="button" onClick={() => setPlaying(!playing)}>{playing ? 'Ⅱ' : '▶'}</button></div></section>
+    <section className="book-grid">{books.map((book, index) => <article className={`book-card ${book.color || ['rose', 'lilac', 'sun'][index % 3]}`} key={`${book.title}-${index}`}><div className="card-top"><span className="number">0{index + 1}</span><button className="heart" type="button" onClick={() => toggleFavorite(book)} aria-label={`Save ${book.title}`}>{favorites.some((item) => item.title === book.title) ? '♥' : '♡'}</button></div><div className="book-cover"><span>✦</span><strong>{book.title}</strong><small>{book.author}</small></div><p className="mood">{book.mood}</p><h3>{book.title}</h3><p>{book.reason}</p><a href={songLink(song || 'dreamy indie songs')} target="_blank" rel="noreferrer">Listen while you read ↗</a></article>)}</section>
+    <footer><span>Made for curious readers ✦</span><span>Private by default · no API key needed</span></footer>
+  </main>;
+}

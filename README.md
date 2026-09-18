@@ -1,62 +1,22 @@
-# Recipe App v2
+# Sonnet — books by feeling
 
-Cute full-stack recipe app with search, filters, clickable recipe details, favorites, Google recipe links, extra recipes, and a free local recommendation assistant.
+A polished song-to-book recommendation app. Type a song or artist and Sonnet uses a local, deterministic mood engine to suggest real books — no AI API key or account required.
 
-## Windows setup
+## Run locally
 
-Run these commands from the **repository root**. The prompt must end with `recipe-app-v2>`:
+From the repository root:
 
-```cmd
-cd /d C:\Users\priya\recipe-app-v2
-git pull origin main
-if exist node_modules rmdir /s /q node_modules
-if exist package-lock.json del package-lock.json
+```bash
 npm install
 npm run dev
 ```
 
-Open the URL in a browser, not in Command Prompt:
+Open http://localhost:5173. The API runs at http://localhost:5000.
 
-```text
-http://localhost:5173
-```
+## How the “AI without an API key” works
 
-To open it from Command Prompt, use:
+The server contains a small local mood/ranking model. It extracts words from the song query, scores matching book moods, and returns the strongest three matches. This keeps the app free and private. For richer AI later, you can connect a locally hosted model such as Ollama without putting a key in the browser.
 
-```cmd
-start "" http://localhost:5173
-```
+## Song playback
 
-Do **not** type `http://localhost:5173` by itself into Command Prompt. Windows interprets `http:` as a command, which causes the `'http:' is not recognized` error.
-
-## If npm still says `Missing script: dev`
-
-Check that the current folder and package file are correct:
-
-```cmd
-cd /d C:\Users\priya\recipe-app-v2
-findstr "dev" package.json
-npm run
-```
-
-The `npm run` output should include:
-
-```text
-dev
-build
-start
-```
-
-If it does not, refresh the repository copy:
-
-```cmd
-cd /d C:\Users\priya\recipe-app-v2
-git fetch origin
-git reset --hard origin/main
-npm install
-npm run dev
-```
-
-Warning: `git reset --hard` removes uncommitted changes in this folder. Copy any personal files before running it.
-
-Open http://localhost:5173 after the servers start. The API runs at http://localhost:5000.
+The play control is intentionally a safe link/search experience: browser apps cannot legally or reliably stream arbitrary commercial music without a music provider integration. “Listen while you read” opens a YouTube search for the song. You can later add Spotify/YouTube Music links or embeds with their official SDKs and permissions.
