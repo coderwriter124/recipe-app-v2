@@ -1,0 +1,1 @@
+{"name":"recipe-app-v2","private":true,"version":"1.0.0","workspaces":["server","client"],"scripts":{"dev":"concurrently \"npm run dev --workspace server\" \"npm run dev --workspace client\"","build":"npm run build --workspace client","start":"npm run start --workspace server"},"devDependencies":{"concurrently":"^9.0.1"}}
